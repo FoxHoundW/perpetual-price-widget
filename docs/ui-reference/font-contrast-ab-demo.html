@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>悬浮窗字体可读性 A/B 对比</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: #e8eef4;
+      background: #080c12;
+      font-family: Inter, "Segoe UI Variable", "Segoe UI", sans-serif;
+    }
+    .board {
+      width: 1200px;
+      height: 720px;
+      padding: 42px 48px 38px;
+      background:
+        radial-gradient(circle at 18% -8%, rgba(60, 198, 255, .13), transparent 28%),
+        radial-gradient(circle at 84% 10%, rgba(73, 225, 154, .08), transparent 26%),
+        linear-gradient(180deg, #111823, #090d13);
+    }
+    header { display: flex; align-items: flex-end; justify-content: space-between; }
+    h1 { margin: 0; color: #f5f8fb; font-size: 27px; letter-spacing: .01em; }
+    header p { margin: 8px 0 0; color: #8895a3; font-size: 13px; }
+    .legend { display: flex; gap: 18px; color: #8d99a5; font-size: 11px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend i { width: 10px; height: 10px; border-radius: 3px; }
+    .legend .dark { background: #17202a; }
+    .legend .light { background: #cbd5de; }
+    .legend .same { background: linear-gradient(135deg, #4edc9b 50%, #ff7282 50%); }
+    .compare { display: grid; margin-top: 28px; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .option {
+      overflow: hidden;
+      border: 1px solid rgba(178, 199, 218, .15);
+      border-radius: 16px;
+      background: rgba(9, 14, 20, .78);
+      box-shadow: 0 22px 60px rgba(0, 0, 0, .28);
+    }
+    .option-head { display: flex; min-height: 72px; padding: 16px 18px; align-items: center; gap: 12px; border-bottom: 1px solid rgba(178, 199, 218, .10); }
+    .option-tag { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 11px; color: #071018; background: #65d9ff; font-size: 18px; font-weight: 800; }
+    .option.b .option-tag { background: #ffc768; }
+    .option-head strong { display: block; font-size: 15px; }
+    .option-head small { display: block; margin-top: 4px; color: #7f8c99; font-size: 10px; }
+    .scene {
+      position: relative;
+      height: 326px;
+      padding: 30px 40px;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(27, 42, 58, .96), transparent 30%),
+        radial-gradient(circle at 78% 18%, rgba(222, 231, 237, .97), transparent 31%),
+        linear-gradient(135deg, #101821 0 36%, #b8c4ce 36% 69%, #56d49a 69% 84%, #ed7180 84%);
+    }
+    .scene::before {
+      position: absolute;
+      inset: 0;
+      content: "";
+      background: repeating-linear-gradient(115deg, rgba(255,255,255,.035) 0 1px, transparent 1px 18px);
+      pointer-events: none;
+    }
+    .desktop-note { position: absolute; top: 10px; left: 14px; color: rgba(255,255,255,.58); font-size: 9px; letter-spacing: .05em; }
+    .widget {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      overflow: hidden;
+      border: 1px solid rgba(15, 24, 32, .40);
+      border-radius: 13px;
+      background: transparent;
+      box-shadow: 0 12px 28px rgba(0,0,0,.10);
+    }
+    .topbar { position: relative; height: 22px; border-bottom: 1px solid rgba(15, 24, 32, .18); }
+    .dot { position: absolute; top: 7px; right: 18px; width: 8px; height: 8px; border-radius: 50%; background: #63e2a5; box-shadow: 0 0 0 4px rgba(12,26,21,.22); }
+    .row { display: grid; height: 56px; padding: 0 13px; grid-template-columns: minmax(0, .95fr) minmax(110px, .95fr) minmax(78px, .62fr); column-gap: 8px; align-items: center; border-bottom: 1px solid rgba(12, 22, 30, .22); }
+    .row:last-child { border-bottom: 0; }
+    .pair { display: flex; min-width: 0; align-items: center; gap: 5px; }
+    .symbol { color: #e8eef4; font-size: 12px; font-weight: 720; letter-spacing: .015em; }
+    .badge { height: 18px; padding: 2px 5px 0; border: 1px solid rgba(90,105,118,.52); border-radius: 6px; color: #b3bec8; background: rgba(13,19,28,.24); font-size: 9px; white-space: nowrap; }
+    .price { text-align: right; font-size: 14px; font-weight: 680; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+    .change { text-align: right; font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+    .up { color: #49e19a; }
+    .down { color: #ff7181; }
+    .option.a .ink { text-shadow: 0 1px 2px rgba(0,0,0,.92), 0 0 3px rgba(0,0,0,.58); }
+    .option.b .ink {
+      -webkit-text-stroke: .45px rgba(0,0,0,.82);
+      paint-order: stroke fill;
+      text-shadow: 0 1px 1px rgba(0,0,0,.34);
+    }
+    .summary { display: grid; min-height: 86px; padding: 15px 18px 16px; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+    .summary strong { color: #dce5ec; font-size: 12px; }
+    .summary p { margin: 5px 0 0; color: #84919e; font-size: 10px; line-height: 1.55; }
+    .rating { padding: 6px 9px; border: 1px solid rgba(101,217,255,.18); border-radius: 7px; color: #9fabb6; background: rgba(101,217,255,.045); font-size: 9px; white-space: nowrap; }
+    .option.b .rating { border-color: rgba(255,199,104,.20); background: rgba(255,199,104,.045); }
+    footer { display: flex; margin-top: 18px; justify-content: center; color: #687582; font-size: 10px; }
+    footer b { margin: 0 4px; color: #a7b3bd; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <header>
+      <div><h1>透明背景下的字体可读性对比</h1><p>使用悬浮窗真实字号与行情颜色 · 背景透明度 0%</p></div>
+      <div class="legend"><span><i class="dark"></i>深色背景</span><span><i class="light"></i>浅色背景</span><span><i class="same"></i>近似同色背景</span></div>
+    </header>
+    <section class="compare">
+      <article class="option a">
+        <div class="option-head"><span class="option-tag">A</span><div><strong>柔和双层阴影</strong><small>1–3px 深色扩散，不改变字体轮廓粗细</small></div></div>
+        <div class="scene">
+          <span class="desktop-note">模拟桌面背景</span>
+          <div class="widget">
+            <div class="topbar"><span class="dot"></span></div>
+            <div class="row"><div class="pair"><span class="symbol ink">BTCUSDT</span><span class="badge ink">U 本位</span></div><span class="price up ink">77,658.10</span><span class="change up ink">↗ +2.73%</span></div>
+            <div class="row"><div class="pair"><span class="symbol ink">ETHUSDT</span><span class="badge ink">U 本位</span></div><span class="price down ink">2,439.80</span><span class="change down ink">↘ -2.25%</span></div>
+            <div class="row"><div class="pair"><span class="symbol ink">SOLUSDT</span><span class="badge ink">U 本位</span></div><span class="price up ink">104.0300</span><span class="change up ink">↗ +3.05%</span></div>
+          </div>
+        </div>
+        <div class="summary"><div><strong>更自然、保持当前轻盈感</strong><p>在复杂桌面上形成柔和暗底；同色区域仍可辨认，但边界不如描边锐利。</p></div><span class="rating">视觉侵入较低</span></div>
+      </article>
+      <article class="option b">
+        <div class="option-head"><span class="option-tag">B</span><div><strong>0.45px 环绕细描边</strong><small>四周均匀深色轮廓，附加极轻微投影</small></div></div>
+        <div class="scene">
+          <span class="desktop-note">模拟桌面背景</span>
+          <div class="widget">
+            <div class="topbar"><span class="dot"></span></div>
+            <div class="row"><div class="pair"><span class="symbol ink">BTCUSDT</span><span class="badge ink">U 本位</span></div><span class="price up ink">77,658.10</span><span class="change up ink">↗ +2.73%</span></div>
+            <div class="row"><div class="pair"><span class="symbol ink">ETHUSDT</span><span class="badge ink">U 本位</span></div><span class="price down ink">2,439.80</span><span class="change down ink">↘ -2.25%</span></div>
+            <div class="row"><div class="pair"><span class="symbol ink">SOLUSDT</span><span class="badge ink">U 本位</span></div><span class="price up ink">104.0300</span><span class="change up ink">↗ +3.05%</span></div>
+          </div>
+        </div>
+        <div class="summary"><div><strong>分离最强、极端背景更稳定</strong><p>浅色和同色区域边缘最清楚；代价是 9–12px 小字看起来会略微更厚。</p></div><span class="rating">可读性更强</span></div>
+      </article>
+    </section>
+    <footer>对比重点：观察<b>绿色价格穿过绿色区域</b>和<b>红色涨跌幅落在红色区域</b>时的文字边缘。</footer>
+  </main>
+</body>
+</html>

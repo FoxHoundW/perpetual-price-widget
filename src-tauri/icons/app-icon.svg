@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="72" y1="52" x2="448" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172635"/>
+      <stop offset="1" stop-color="#091018"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#94E8FF"/>
+      <stop offset="1" stop-color="#49BFE6"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-40%" width="260%" height="200%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#bg)"/>
+  <rect x="25" y="25" width="462" height="462" rx="111" fill="none" stroke="#A8C8DD" stroke-opacity=".24" stroke-width="2"/>
+  <circle cx="384" cy="128" r="74" fill="#65D9FF" fill-opacity=".06"/>
+  <g filter="url(#glow)">
+    <rect x="134" y="280" width="50" height="104" rx="25" fill="url(#cyan)"/>
+    <rect x="231" y="128" width="50" height="256" rx="25" fill="#49E19A"/>
+    <rect x="328" y="208" width="50" height="176" rx="25" fill="url(#cyan)"/>
+  </g>
+</svg>

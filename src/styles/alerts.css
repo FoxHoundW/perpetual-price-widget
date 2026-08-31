@@ -1,0 +1,197 @@
+.alerts-view #app {
+  width: fit-content;
+}
+
+.alert-panel {
+  display: flex;
+  width: 264px;
+  height: 100vh;
+  max-height: 100vh;
+  padding: 2px 7px 12px 2px;
+  flex-direction: column;
+  gap: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.alert-stack {
+  position: relative;
+  flex: 0 0 auto;
+  padding-bottom: calc((var(--layers) - 1) * 6px);
+  isolation: isolate;
+}
+
+.stack-layer {
+  position: absolute;
+  z-index: -1;
+  right: 7px;
+  bottom: 2px;
+  left: 7px;
+  height: 78%;
+  border: 1px solid rgba(170, 193, 213, 0.13);
+  border-radius: var(--radius-card);
+  background: var(--alert-card-background, rgba(17, 25, 35, 0.94));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+}
+
+.stack-layer.layer-1 {
+  transform: translateY(5px) scale(0.965);
+  opacity: 0.78;
+}
+
+.stack-layer.layer-2 {
+  transform: translateY(10px) scale(0.925);
+  opacity: 0.5;
+}
+
+.alert-card {
+  position: relative;
+  min-height: 150px;
+  overflow: hidden;
+  border: 1px solid rgba(171, 194, 213, 0.17);
+  border-radius: var(--radius-card);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.035), transparent 48%), var(--alert-card-background, rgba(17, 25, 35, 0.94));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38), inset 0 1px rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+  transition: transform var(--duration) var(--ease-out), border-color var(--duration), box-shadow var(--duration);
+}
+
+.alert-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  content: "";
+  background: var(--alert-up-accent, var(--up));
+  box-shadow: 0 0 14px var(--alert-up-soft, rgba(73, 225, 154, 0.55));
+}
+
+.tone-down .alert-card::before {
+  background: var(--alert-down-accent, var(--down));
+  box-shadow: 0 0 14px var(--alert-down-soft, rgba(255, 113, 129, 0.55));
+}
+
+.alert-card::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background: radial-gradient(circle at 4% 10%, var(--alert-up-soft, rgba(73, 225, 154, 0.11)), transparent 40%);
+  pointer-events: none;
+}
+
+.tone-down .alert-card::after {
+  background: radial-gradient(circle at 4% 10%, var(--alert-down-soft, rgba(255, 113, 129, 0.11)), transparent 40%);
+}
+
+.alert-card:hover {
+  border-color: rgba(171, 194, 213, 0.29);
+  transform: translateY(-1px);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.43), inset 0 1px rgba(255, 255, 255, 0.045);
+}
+
+.alert-card:active {
+  transform: translateY(0) scale(0.992);
+}
+
+.alert-card-head {
+  display: flex;
+  min-height: 50px;
+  padding: 13px 10px 0 15px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.alert-title-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.alert-title-line strong {
+  color: #f1f5f8;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.alert-kind {
+  display: block;
+  margin-top: 3px;
+  color: #8896a4;
+  font-size: 10px;
+}
+
+.alert-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stack-count {
+  min-width: 30px;
+  color: #83909e;
+  font-size: 10px;
+  font-weight: 650;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.close-alert {
+  width: 24px;
+  height: 24px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.alert-metric {
+  padding: 5px 15px 8px;
+  font-size: 24px;
+  font-weight: 720;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.alert-metric.up { color: var(--alert-up-accent, var(--up)); }
+.alert-metric.down { color: var(--alert-down-accent, var(--down)); }
+
+.alert-card :is(.alert-card-head, .alert-metric, .alert-details) {
+  opacity: var(--widget-font-opacity, 1);
+}
+
+.alert-details {
+  display: grid;
+  margin: 0;
+  padding: 10px 15px 12px;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid rgba(171, 194, 213, 0.09);
+}
+
+.alert-details div:last-child {
+  text-align: right;
+}
+
+.alert-details dt {
+  margin-bottom: 3px;
+  color: #677684;
+  font-size: 9px;
+}
+
+.alert-details dd {
+  margin: 0;
+  color: #cbd5dd;
+  font-size: 11px;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes alert-enter {
+  from { opacity: 0; transform: translateX(-14px) scale(0.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.alert-stack.is-entering {
+  animation: alert-enter var(--duration) var(--ease-out) both;
+}
+
+.alert-stack.is-entering:nth-child(2) { animation-delay: 45ms; }

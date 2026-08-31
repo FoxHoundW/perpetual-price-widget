@@ -1,0 +1,14 @@
+.superpowers/
+node_modules/
+dist/
+target/
+src-tauri/target/
+*.log
+*.tmp
+src-tauri/gen/
+.idea/
+.vscode/
+发布版本/
+.env
+.env.*
+!.env.example
