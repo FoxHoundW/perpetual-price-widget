@@ -14,15 +14,19 @@ import { showWidgetContextMenu } from "./ui/context-menu";
 import { createDemoAlertStacks } from "./ui/demo-data";
 import { bindSettingsWindow, renderSettingsWindow } from "./ui/settings";
 import { renderWidget } from "./ui/widget";
+import { getWalletStatus, saveWalletCredentials } from "./runtime";
+import { watchWallet } from "./wallet-sync";
+import { toggleWalletDetails, hideWalletDetails } from "./runtime";
+import { renderWalletDetails, walletDetailsShell } from "./ui/wallet-details";
 
-type View = "showcase" | "widget" | "settings" | "alerts";
+type View = "showcase" | "widget" | "settings" | "alerts" | "wallet-details";
 
 const appNode = document.querySelector<HTMLElement>("#app");
 if (!appNode) throw new Error("找不到应用挂载节点");
 const app: HTMLElement = appNode;
 
 const requested = new URLSearchParams(window.location.search).get("view");
-const view: View = ["widget", "settings", "alerts"].includes(requested ?? "")
+const view: View = ["widget", "settings", "alerts", "wallet-details"].includes(requested ?? "")
   ? (requested as View)
   : "showcase";
 
@@ -58,10 +62,36 @@ function activeAlertSymbols(alerts: AlertRecord[]): Map<string, Direction> {
 
 async function mountWidget(): Promise<void> {
   document.body.className = "native-view widget-view";
+  let dragOrigin: { x: number; y: number } | null = null;
+  let draggedBalance = false;
+  app.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || !(event.target instanceof Element) || !event.target.closest(".wallet-balance")) return;
+    dragOrigin = { x: event.clientX, y: event.clientY };
+    draggedBalance = false;
+  });
+  window.addEventListener("pointermove", (event) => {
+    if (!dragOrigin || !isTauriRuntime) return;
+    if (Math.hypot(event.clientX - dragOrigin.x, event.clientY - dragOrigin.y) < 5) return;
+    dragOrigin = null;
+    draggedBalance = true;
+    if (app.querySelector(".widget-drag-region[data-tauri-drag-region]")) void getCurrentWindow().startDragging();
+  });
+  window.addEventListener("pointerup", () => { dragOrigin = null; });
+  window.addEventListener("pointercancel", () => { dragOrigin = null; });
+  window.addEventListener("blur", () => { dragOrigin = null; });
+  app.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest(".wallet-balance")) return;
+    if (draggedBalance) { draggedBalance = false; return; }
+    if (isTauriRuntime) void toggleWalletDetails();
+    else window.location.href = "?view=wallet-details";
+  });
   if (!isTauriRuntime) {
     applyAppearanceVariables(DEFAULT_SETTINGS.appearance);
+    const balancePreview = new URLSearchParams(window.location.search).get("balancePreview");
     app.innerHTML = renderWidget({
       tickers: DEMO_TICKERS,
+      showBalance: balancePreview !== null,
+      balance: balancePreview === "error" ? null : balancePreview,
       alertSymbols: new Map([[symbolKey("usdm", "SOLUSDT"), "up"]]),
     });
     return;
@@ -71,10 +101,13 @@ async function mountWidget(): Promise<void> {
     let settings = bootstrap.settings;
     applyAppearanceVariables(settings.appearance);
     let latestTickers = bootstrap.tickers;
+    let walletBalance: string | null = null;
     let latestAlerts = await getAlertStates();
     let mousePassthrough = false;
     let refreshTimer: number | undefined;
     const renderLatest = (tickers: TickerSnapshot[]): void => {
+      latestTickers = tickers;
+      if (dragOrigin) return;
       const previousScroll = app.querySelector<HTMLElement>(".ticker-scroll")?.scrollTop ?? 0;
       latestTickers = tickers;
       const ordered = orderedTickers(settings, tickers, bootstrap.contracts);
@@ -83,9 +116,12 @@ async function mountWidget(): Promise<void> {
         stale: ordered.some((ticker) => ticker.status !== "delisted")
           && ordered.every((ticker) => ["stale", "reconnecting", "delisted"].includes(ticker.status)),
         lockWindow: settings.lockWindow,
+        showBalance: settings.showBalance,
+        balance: walletBalance,
         alertSymbols: activeAlertSymbols(latestAlerts),
       });
       const nextScroll = app.querySelector<HTMLElement>(".ticker-scroll");
+
       if (nextScroll) {
         nextScroll.scrollTop = Math.min(
           previousScroll,
@@ -110,6 +146,13 @@ async function mountWidget(): Promise<void> {
       });
     };
     renderLatest(bootstrap.tickers);
+    const stopWallet = await watchWallet(snapshot => {
+      walletBalance = settings.showBalance ? snapshot.balance : null;
+      const label = app.querySelector<HTMLElement>(".wallet-balance");
+      if (label) label.textContent = `账号余额：${walletBalance ?? "---"}`;
+
+    });
+    window.addEventListener("beforeunload", stopWallet, { once: true });
     const refresh = async (): Promise<void> => {
       try {
         [latestTickers, latestAlerts] = await Promise.all([getTickers(), getAlertStates()]);
@@ -122,6 +165,8 @@ async function mountWidget(): Promise<void> {
     };
     refreshTimer = window.setTimeout(() => void refresh(), settings.refreshIntervalMs);
     await listen<AppSettings>("settings-updated", (event) => {
+      if (!event.payload.showBalance) void hideWalletDetails();
+      if (settings.showBalance !== event.payload.showBalance) walletBalance = null;
       settings = event.payload;
       applyAppearanceVariables(settings.appearance);
       if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
@@ -216,6 +261,8 @@ async function mountSettings(): Promise<void> {
       onLoadLogs: () => getLogs(0, 50),
       onClearLogs: clearLogs,
       onSaveProxy: saveProxyPassword,
+      onSaveWallet: saveWalletCredentials,
+      onWalletStatus: getWalletStatus,
       onTestProxy: testProxy,
       onClose: closeSettings,
     });
@@ -326,7 +373,40 @@ function mountShowcase(): void {
   });
 }
 
+async function mountWalletDetails(): Promise<void> {
+  document.body.className = "native-view wallet-details-view";
+  app.innerHTML = walletDetailsShell();
+  const list = app.querySelector<HTMLElement>(".wallet-detail-list")!;
+  list.innerHTML = renderWalletDetails(null);
+  const close = (): void => { if (isTauriRuntime) void hideWalletDetails(); else window.history.back(); };
+  app.querySelector(".wallet-details-close")?.addEventListener("click", close);
+  window.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+  if (!isTauriRuntime) {
+    applyAppearanceVariables(DEFAULT_SETTINGS.appearance);
+    list.innerHTML = renderWalletDetails({ balance: "123456.78", wallets: [], error: null, updatedAt: Date.now(), details: [
+      {name:"Spot", balance:"10000.00"}, {name:"USDⓈ-M Futures (PM)", balance:"3456.78"}, {name:"Copy Trading", balance:"110000.00"},
+    ] });
+    return;
+  }
+  applyAppearanceVariables((await getBootstrap()).settings.appearance);
+  await listen<AppSettings>("settings-updated", event => { applyAppearanceVariables(event.payload.appearance); if (!event.payload.showBalance) close(); });
+  let signature = "";
+  const update = (html: string): void => {
+      if (html !== signature) {
+        const scroll = list.scrollTop;
+        list.innerHTML = html;
+        list.scrollTop = scroll;
+        signature = html;
+      }
+  };
+  const stopWallet = await watchWallet(snapshot => update(renderWalletDetails(snapshot)));
+  window.addEventListener("beforeunload", stopWallet, { once: true });
+}
+
 switch (view) {
+  case "wallet-details":
+    void mountWalletDetails();
+    break;
   case "widget":
     void mountWidget();
     break;

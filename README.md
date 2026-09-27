@@ -2,10 +2,12 @@
 
 一个面向 Windows 10/11 的轻量币安永续合约价格悬浮窗。主体仅显示交易对、最新成交价和 24 小时涨跌幅，并提供可配置的异动提醒。
 
-> 本项目与 Binance 无隶属、授权或背书关系。软件只读取公开市场数据，不需要 API Key，不提供交易功能，也不构成投资建议。
+> 本项目与 Binance 无隶属、授权或背书关系。行情不需要 API Key；可选的账号余额功能需要账户读取凭据。软件不提供交易功能，也不构成投资建议。
 
 ## 主要功能
 
+- 可选账号总余额（USDT 估值）及各钱包明细，默认每秒后台更新，点击余额展开明细。
+- 总余额与钱包明细同步刷新，失败显示 ---；不提供仓位浮盈或网页登录。
 - 同时支持 USDⓈ-M 与 COIN-M 交易中的永续合约。
 - 每日自动刷新官方交易对目录，也可在设置中手动刷新。
 - 默认 BTCUSDT、ETHUSDT、SOLUSDT 和 3 个可视行，支持 1–20 行。
@@ -21,8 +23,8 @@
 
 请在 [GitHub Releases](https://github.com/FoxHoundW/perpetual-price-widget/releases) 下载最新版本：
 
-- `Perpetual.Price.Widget_1.0.0_x64-setup.exe`：安装版，适合日常使用。
-- `Perpetual.Price.Widget_1.0.0_x64-portable.exe`：便携版，可直接运行。
+- `Perpetual.Price.Widget_1.1.0_x64-setup.exe`：安装版，适合日常使用。
+- `Perpetual.Price.Widget_1.1.0_x64-portable.exe`：便携版，可直接运行。
 - `SHA256SUMS.txt`：用于校验下载文件完整性。
 
 系统要求：Windows 10/11 x64 和 Microsoft Edge WebView2 Runtime。Windows 10 与 Windows 11 通常已包含 WebView2，安装程序也会在缺失时尝试下载。
@@ -35,13 +37,14 @@
 - 托盘菜单可显示/隐藏悬浮窗或退出。
 - 鼠标穿透开启后，通过系统托盘菜单关闭穿透或进入设置。
 - 设置中可管理交易对、异动阈值、外观、代理、开机自启和日志。
+- 基础设置中可开启账号余额，并在本机填写具有账户读取权限的 API Key 与 Secret Key。不要将密钥发到 Issues、聊天或源码中。首次使用请核对钱包覆盖范围和官网总览。
 
 ## 数据与隐私
 
 - 市场数据来自 Binance 公开合约接口。
 - 设置、有界状态数据和日志保存在当前 Windows 用户的应用数据目录。
 - 代理密码不保存在设置文件中，而是交由 Windows Credential Manager 保管。
-- 软件不要求币安账户，不读取 API Key，不提交订单。
+- 行情不要求币安账户。可选的账号余额功能使用本机 Windows 凭据管理器保存 HMAC API Key 与 Secret Key，仅查询余额，不提交订单。
 
 ## 本地开发
 

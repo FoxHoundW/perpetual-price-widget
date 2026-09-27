@@ -3,6 +3,8 @@ import { symbolKey } from "../domain/types";
 import { escapeHtml, marketLabel } from "./shared";
 
 export interface WidgetOptions {
+  showBalance?: boolean;
+  balance?: string | null;
   tickers: TickerSnapshot[];
   stale?: boolean;
   lockWindow?: boolean;
@@ -11,6 +13,8 @@ export interface WidgetOptions {
 }
 
 export function renderWidget({
+  showBalance = false,
+  balance = null,
   tickers,
   stale = false,
   lockWindow = false,
@@ -49,6 +53,7 @@ export function renderWidget({
   return `
     <section class="ticker-widget ${className}" aria-label="永续合约行情">
       <div class="widget-drag-region" ${lockWindow ? "" : "data-tauri-drag-region"}>
+        ${showBalance ? `<button type="button" class="wallet-balance symbol-name" aria-label="查看各钱包余额" aria-haspopup="dialog">账号余额：${escapeHtml(balance ?? "---")}</button>` : ""}
         <div class="connection-dot ${stale ? "warning" : "live"}" title="${stale ? "行情暂时中断，正在重新连接" : "行情连接正常"}">
           <span></span><span class="sr-only">${stale ? "行情暂时中断" : "行情连接正常"}</span>
         </div>

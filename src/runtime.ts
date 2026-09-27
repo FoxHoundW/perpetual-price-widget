@@ -22,6 +22,21 @@ export interface RuntimeLogRow {
 
 export const isTauriRuntime = "__TAURI_INTERNALS__" in window;
 
+export interface WalletSnapshot {
+  details: Array<{ name: string; balance: string }>;
+  balance: string | null;
+  wallets: string[];
+  error: string | null;
+  updatedAt: number | null;
+}
+
+export const getWalletBalance = (): Promise<WalletSnapshot> => invoke("get_wallet_balance");
+export const getWalletStatus = (): Promise<WalletSnapshot> => invoke("get_wallet_status");
+export const toggleWalletDetails = (): Promise<void> => invoke("toggle_wallet_details");
+export const hideWalletDetails = (): Promise<void> => invoke("hide_wallet_details");
+export const saveWalletCredentials = (apiKey: string, secret: string): Promise<void> =>
+  invoke("save_wallet_credentials", { apiKey, secret });
+
 export async function getBootstrap(): Promise<BootstrapPayload> {
   return invoke<BootstrapPayload>("get_bootstrap");
 }

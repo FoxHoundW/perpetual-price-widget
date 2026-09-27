@@ -7,6 +7,7 @@ mod credentials;
 mod market_stream;
 mod models;
 mod persistence;
+mod wallet;
 
 use std::sync::Arc;
 
@@ -37,7 +38,18 @@ pub fn run() {
             Some(vec!["--autostart"]),
         ))
         .on_window_event(|window, event| {
+            if window.label() == "main"
+                && matches!(
+                    event,
+                    tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_)
+                )
+            {
+                let _ = commands::hide_wallet_details(window.app_handle().clone());
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    let _ = commands::hide_wallet_details(window.app_handle().clone());
+                }
                 api.prevent_close();
                 let _ = window.hide();
                 if window.label() == "settings" {
@@ -83,6 +95,8 @@ pub fn run() {
                 Arc::clone(&persistence),
             );
             app.manage(AppState {
+                wallet: Mutex::new(wallet::WalletState::default()),
+                wallet_snapshot: RwLock::new(wallet::WalletSnapshot::default()),
                 persistence: Arc::clone(&persistence),
                 settings: settings_state,
                 settings_write_lock: Mutex::new(()),
@@ -122,6 +136,8 @@ pub fn run() {
                 }
             }
 
+            let wallet_app = app.handle().clone();
+            tauri::async_runtime::spawn(wallet::run(wallet_app));
             let stream_settings = settings.clone();
             tauri::async_runtime::spawn(async move {
                 market_streams
@@ -264,6 +280,11 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::toggle_wallet_details,
+            commands::hide_wallet_details,
+            wallet::get_wallet_balance,
+            wallet::get_wallet_status,
+            wallet::save_wallet_credentials,
             commands::get_bootstrap,
             commands::get_tickers,
             commands::save_settings,

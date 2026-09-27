@@ -59,8 +59,56 @@
 .widget-drag-region {
   position: relative;
   height: 18px;
+  flex: 0 0 18px;
   cursor: default;
 }
+
+.wallet-balance {
+  position: absolute;
+  left: 10px;
+  max-width: calc(100% - 60px);
+  top: 1px;
+  white-space: nowrap;
+  line-height: 16px;
+  pointer-events: auto;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  user-select: none;
+  cursor: default;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticker-widget, .ticker-widget *, .wallet-details, .wallet-details *, .alert-panel, .alert-panel * {
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.wallet-details {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-window);
+  background: var(--widget-background, #0d131c);
+  color: var(--text);
+  font-size: 12px;
+  animation: wallet-open 160ms ease-out;
+}
+.wallet-details header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.wallet-details header small { color: var(--text-muted); margin-left: 6px; }
+.wallet-detail-list { overflow-y: auto; flex: 1; min-height: 0; scrollbar-width: none; }
+.wallet-detail-list::-webkit-scrollbar { display: none; }
+.wallet-detail-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.wallet-detail-row span { min-width: 0; overflow-wrap: anywhere; }
+.wallet-detail-row strong { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.wallet-details :is(span, strong) { opacity: var(--widget-font-opacity, 1); text-shadow: var(--widget-font-shadow); }
+.wallet-detail-empty { color: var(--text-muted); padding: 12px 0; }
+@keyframes wallet-open { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .wallet-details { animation: none; } }
 
 .widget-drag-region:active {
   cursor: default;

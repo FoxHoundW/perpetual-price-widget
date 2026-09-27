@@ -159,6 +159,8 @@ impl Default for ProxySettings {
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct AppSettings {
+    #[serde(default)]
+    pub show_balance: bool,
     pub autostart: bool,
     pub always_on_top: bool,
     pub visible_rows: u8,
@@ -193,6 +195,7 @@ impl Default for WindowGeometry {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
+            show_balance: false,
             autostart: true,
             always_on_top: true,
             visible_rows: 3,

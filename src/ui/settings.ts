@@ -3,7 +3,7 @@ import { ALERT_PERIODS, DEFAULT_SETTINGS, DEMO_CONTRACTS } from "../domain/defau
 import { normalizeSettings } from "../domain/defaults";
 import type { AlertPeriod, AppSettings, Contract, WatchItem } from "../domain/types";
 import { WIDGET_DEFAULT_WIDTH, widgetHeightForRows } from "../domain/widget-layout";
-import type { RuntimeLogRow } from "../runtime";
+import type { RuntimeLogRow, WalletSnapshot } from "../runtime";
 import { escapeHtml, marketLabel, periodLabel } from "./shared";
 
 type SettingsPage = "basic" | "personalization" | "pairs" | "alerts" | "proxy" | "logs" | "about";
@@ -30,6 +30,8 @@ interface SettingsState {
 }
 
 export interface SettingsBindings {
+  onSaveWallet?: (apiKey: string, secret: string) => Promise<void>;
+  onWalletStatus?: () => Promise<WalletSnapshot>;
   initialSettings?: AppSettings;
   contracts?: Contract[];
   catalogSyncedAt?: number | null;
@@ -167,6 +169,14 @@ function pageHead(title: string, description: string, action = ""): string {
 function renderBasic(settings: AppSettings): string {
   return `
     ${pageHead("基础设置", "调整悬浮窗的启动、显示和刷新行为。")}
+    <section class="settings-section">
+      <div class="section-heading"><h2>账号余额</h2><p>以 USDT 汇总账户钱包估值，每秒查询一次；读取失败显示 ---。</p></div>
+      ${toggleField("显示账号余额", "在顶部拖动区域显示，不改变窗口尺寸。", "show-balance", settings.showBalance)}
+      <div class="field-row"><div><label for="wallet-api-key">API Key</label><p>使用币安系统生成的 HMAC 密钥，仅需账户读取权限。</p></div><input id="wallet-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入或替换 API Key"></div>
+      <div class="field-row"><div><label for="wallet-secret">Secret Key</label><p>凭据保存在本机 Windows 凭据管理器中。</p></div><input id="wallet-secret" type="password" autocomplete="off" spellcheck="false" placeholder="输入或替换 Secret Key"></div>
+      <div class="inline-actions wallet-actions"><button class="secondary-button save-wallet" type="button">保存账户凭据</button><button class="secondary-button wallet-status-button" type="button">查看读取状态</button></div>
+      <p class="wallet-status" role="status" aria-live="polite">首次接入后，请核对返回的钱包是否包含跟单资金，以及总额是否与币安账户总览一致。</p>
+    </section>
     <section class="settings-section">
       <div class="section-heading"><h2>启动与窗口</h2><p>更改会立即保存并应用。</p></div>
       ${toggleField("开机自动启动", "登录 Windows 后自动运行并驻留系统托盘。", "autostart", settings.autostart)}
@@ -369,8 +379,8 @@ function renderLogRow(log: RuntimeLogRow): string {
 export function renderAbout(): string {
   return `
     ${pageHead("关于", "轻量、只读的币安永续价格悬浮窗。")}
-    <section class="about-hero"><div class="large-app-mark"><span></span><span></span><span></span></div><div><h2>永续价格悬浮窗</h2><p>版本 1.0.0</p></div></section>
-    <section class="settings-section about-list"><div><span>许可证</span><strong>MIT 开源许可证</strong></div><div><span>数据来源</span><strong>Binance 公共行情接口</strong></div><div><span>权限说明</span><strong>不需要 API Key，不提供交易功能</strong></div><div><span>支持系统</span><strong>Windows 10 / Windows 11</strong></div></section>
+    <section class="about-hero"><div class="large-app-mark"><span></span><span></span><span></span></div><div><h2>永续价格悬浮窗</h2><p>版本 1.1.0</p></div></section>
+    <section class="settings-section about-list"><div><span>许可证</span><strong>MIT 开源许可证</strong></div><div><span>数据来源</span><strong>Binance 官方接口</strong></div><div><span>权限说明</span><strong>行情免密钥；余额需读取凭据，不提供交易功能</strong></div><div><span>支持系统</span><strong>Windows 10 / Windows 11</strong></div></section>
     <div class="about-actions"><button class="secondary-button" type="button">查看 MIT 许可证</button><button class="secondary-button" type="button">第三方许可证</button></div>`;
 }
 
@@ -394,6 +404,37 @@ function bindPage(
   };
 
   const autostart = root.querySelector<HTMLInputElement>("#autostart");
+  const showBalance = root.querySelector<HTMLInputElement>("#show-balance");
+  showBalance?.addEventListener("change", () => {
+    state.settings.showBalance = showBalance.checked;
+    commit();
+  });
+  const walletStatus = root.querySelector<HTMLElement>(".wallet-status");
+  root.querySelector<HTMLButtonElement>(".save-wallet")?.addEventListener("click", async (event) => {
+    const key = root.querySelector<HTMLInputElement>("#wallet-api-key");
+    const secret = root.querySelector<HTMLInputElement>("#wallet-secret");
+    if (!key || !secret || !walletStatus) return;
+    if (!key.value.trim() || !secret.value.trim()) { walletStatus.textContent = "请同时填写 API Key 和 Secret Key。"; return; }
+    const button = event.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    try {
+      if (!bindings.onSaveWallet) throw new Error("请在桌面软件中配置账户，网页预览不保存密钥。");
+      await bindings.onSaveWallet(key.value, secret.value);
+      key.value = ""; secret.value = "";
+      walletStatus.textContent = "账户凭据已保存。开启显示后将自动读取余额。";
+    } catch (error) { walletStatus.textContent = String(error); }
+    finally { button.disabled = false; }
+  });
+  root.querySelector<HTMLButtonElement>(".wallet-status-button")?.addEventListener("click", async () => {
+    if (!walletStatus) return;
+    try {
+      if (!bindings.onWalletStatus) throw new Error("请在桌面软件中查看账户状态。");
+      const status = await bindings.onWalletStatus();
+      walletStatus.textContent = status.error ?? (status.updatedAt
+        ? `最近成功读取：${new Date(status.updatedAt).toLocaleTimeString()}；返回钱包：${status.wallets.join("、")}。请与币安总览核对跟单资产覆盖情况。`
+        : "尚未读取余额，请保存凭据并开启显示。");
+    } catch (error) { walletStatus.textContent = String(error); }
+  });
   autostart?.addEventListener("change", () => {
     state.settings.autostart = autostart.checked;
     commit();

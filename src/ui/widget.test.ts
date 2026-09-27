@@ -15,6 +15,16 @@ function ticker(change24h: number): TickerSnapshot {
 }
 
 describe("renderWidget", () => {
+  it("shows the balance in the existing drag region, and uses dashes for errors", () => {
+    expect(renderWidget({ tickers: [], showBalance: true, balance: "123456.78" }))
+      .toMatch(/data-tauri-drag-region>\s*<button[^>]+class="wallet-balance symbol-name"[^>]*>账号余额：123456.78/);
+    expect(renderWidget({ tickers: [], showBalance: true })).toContain("账号余额：---");
+    expect(renderWidget({ tickers: [], showBalance: true })).not.toContain("仓位浮盈");
+    expect(renderWidget({ tickers: [], showBalance: true })).not.toContain("position-profit");
+    expect(renderWidget({ tickers: [], showBalance: true, balance: "0.00" })).toContain("账号余额：0.00");
+    expect(renderWidget({ tickers: [], balance: "123" })).not.toContain("wallet-balance");
+    expect(renderWidget({ tickers: [], showBalance: true, lockWindow: true })).not.toContain("data-tauri-drag-region");
+  });
   it("renders no visual header or price flash classes", () => {
     const html = renderWidget({ tickers: [ticker(2.84)] });
     expect(html).not.toContain("ticker-head");

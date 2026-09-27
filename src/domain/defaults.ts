@@ -2,6 +2,7 @@ import type { AlertPeriod, AppSettings, Contract, TickerSnapshot } from "./types
 import { WIDGET_DEFAULT_WIDTH, WIDGET_MAX_WIDTH, WIDGET_MIN_WIDTH } from "./widget-layout";
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  showBalance: false,
   autostart: true,
   alwaysOnTop: true,
   visibleRows: 3,

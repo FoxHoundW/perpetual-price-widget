@@ -14,7 +14,7 @@ describe("renderSettingsWindow", () => {
     const html = renderSettingsWindow();
     expect(html).toContain('data-page="personalization"');
     expect(html).toContain("个性化");
-    expect(renderAbout()).toContain("版本 1.0.0");
+    expect(renderAbout()).toContain("版本 1.1.0");
     expect(renderAbout()).not.toContain("版本 0.1.0");
   });
 

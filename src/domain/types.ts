@@ -70,6 +70,7 @@ export interface AppearanceSettings {
 }
 
 export interface AppSettings {
+  showBalance: boolean;
   autostart: boolean;
   alwaysOnTop: boolean;
   visibleRows: number;

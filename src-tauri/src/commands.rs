@@ -21,6 +21,8 @@ use crate::{
 };
 
 pub struct AppState {
+    pub wallet: Mutex<crate::wallet::WalletState>,
+    pub wallet_snapshot: RwLock<crate::wallet::WalletSnapshot>,
     pub persistence: Arc<Persistence>,
     pub settings: Arc<RwLock<AppSettings>>,
     pub settings_write_lock: Mutex<()>,
@@ -314,6 +316,7 @@ pub async fn dismiss_alert(
 
 #[tauri::command]
 pub fn open_settings(app: AppHandle) -> Result<(), String> {
+    hide_wallet_details(app.clone())?;
     if let Some(main) = app.get_webview_window("main") {
         main.set_always_on_top(false).map_err(error_message)?;
     }
@@ -354,6 +357,7 @@ pub async fn show_main(app: AppHandle, state: State<'_, AppState>) -> Result<(),
 
 #[tauri::command]
 pub fn hide_main(app: AppHandle) -> Result<(), String> {
+    hide_wallet_details(app.clone())?;
     app.get_webview_window("main")
         .ok_or_else(|| "主体窗口不存在".to_string())?
         .hide()
@@ -362,12 +366,103 @@ pub fn hide_main(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn set_mouse_passthrough(app: AppHandle, enabled: bool) -> Result<(), String> {
+    if enabled {
+        hide_wallet_details(app.clone())?;
+    }
     apply_mouse_passthrough(&app, enabled)
 }
 
 #[tauri::command]
 pub fn exit_app(app: AppHandle) {
     app.exit(0);
+}
+
+#[tauri::command]
+pub fn hide_wallet_details(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("wallet-details") {
+        window.hide().map_err(error_message)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn toggle_wallet_details(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let label = "wallet-details";
+    if let Some(window) = app.get_webview_window(label) {
+        if window.is_visible().map_err(error_message)? {
+            return hide_wallet_details(app);
+        }
+    }
+    hide_wallet_details(app.clone())?;
+    if !state.settings.read().await.show_balance {
+        return Ok(());
+    }
+    let main = app.get_webview_window("main").ok_or("主体窗口不存在")?;
+    if !main.is_visible().map_err(error_message)? {
+        return Ok(());
+    }
+    let monitor = main
+        .current_monitor()
+        .map_err(error_message)?
+        .ok_or("无法获取当前显示器")?;
+    let position = main.outer_position().map_err(error_message)?;
+    let scale = main.scale_factor().map_err(error_message)?;
+    let area = monitor.work_area();
+    let width = (300.0 * scale).round() as u32;
+    let desired_height = (360.0 * scale).round() as u32;
+    let gap = (6.0 * scale).round() as i32;
+    let above = (position.y - area.position.y - gap).max(0) as u32;
+    let main_height = main.outer_size().map_err(error_message)?.height as i32;
+    let below =
+        (area.position.y + area.size.height as i32 - position.y - main_height - gap).max(0) as u32;
+    let upward = above >= desired_height || above >= below;
+    let height = desired_height
+        .min(if upward { above } else { below })
+        .max((80.0 * scale) as u32)
+        .min(area.size.height);
+    let width = width.min(area.size.width);
+    let x = position.x.clamp(
+        area.position.x,
+        area.position.x + area.size.width as i32 - width as i32,
+    );
+    let y = if upward {
+        position.y - gap - height as i32
+    } else {
+        position.y + main_height + gap
+    };
+    let y = y.clamp(
+        area.position.y,
+        area.position.y + area.size.height as i32 - height as i32,
+    );
+    let window = match app.get_webview_window(label) {
+        Some(window) => window,
+        None => WebviewWindowBuilder::new(
+            &app,
+            label,
+            WebviewUrl::App(format!("index.html?view={label}").into()),
+        )
+        .title("各钱包余额")
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .always_on_top(true)
+        .resizable(false)
+        .skip_taskbar(true)
+        .visible(false)
+        .build()
+        .map_err(error_message)?,
+    };
+    window
+        .set_size(tauri::PhysicalSize::new(width, height))
+        .map_err(error_message)?;
+    window
+        .set_position(tauri::PhysicalPosition::new(x, y))
+        .map_err(error_message)?;
+    window.show().map_err(error_message)?;
+    window.set_focus().map_err(error_message)
 }
 
 pub(crate) fn apply_mouse_passthrough(app: &AppHandle, enabled: bool) -> Result<(), String> {

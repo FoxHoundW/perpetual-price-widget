@@ -539,3 +539,6 @@ input::-webkit-inner-spin-button { appearance: none; }
   .radio-cards { width: 100%; }
   .alert-table-head, .alert-setting-row { grid-template-columns: minmax(105px, 1fr) 48px 80px 80px; }
 }
+.wallet-actions { padding: 12px 18px 0; flex-wrap: wrap; }
+.wallet-status { padding: 0 18px 14px; color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
+#wallet-api-key, #wallet-secret { width: 220px; min-width: 0; max-width: 45%; }
